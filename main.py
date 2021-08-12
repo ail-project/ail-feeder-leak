@@ -155,5 +155,4 @@ if __name__ == "__main__":
     Chunks = 1000000
     dir_path = ntpath.dirname(ntpath.realpath(__file__))
     # do not name the leak with numbers or underscore
-
     split(dir_path + r"\test\France-Hostpital.txt", Chunks, split_only=False)
