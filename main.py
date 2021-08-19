@@ -6,6 +6,7 @@ import hashlib
 import ntpath
 import os
 import re
+import shutil
 import time
 from threading import Event
 
@@ -32,8 +33,9 @@ def ail_publish(apikey, manifest_file, file_name, data=None):
                 filepath = ntpath.join(ntpath.dirname(ntpath.realpath(manifest_file)), file_name)
                 if os.path.exists(filepath):
                     previous_file = re.findall(r"[-+]?\d*\.\d+|\d+", file_name.split('_')[1])
-                    file_to_del = file_name.split('_')[0] + "_" + str(int(previous_file[0]) - 1) + ".txt"
-                    os.unlink(ntpath.join(ntpath.dirname(ntpath.realpath(manifest_file)), file_to_del))
+                    if not int(previous_file[0]) - 1 == 0:
+                        file_to_del = file_name.split('_')[0] + "_" + str(int(previous_file[0]) - 1) + ".txt"
+                        os.unlink(ntpath.join(ntpath.dirname(ntpath.realpath(manifest_file)), file_to_del))
                     remove_split_manifest(manifest_file, "filename", file_name)
                     return True
             if data.get("status") == "error":
@@ -93,14 +95,8 @@ def split(leak_name, chunk_size, split_only=False):
     dir_path = ntpath.dirname(ntpath.realpath(leak_name))
     manifest_file = dir_path + r"\fs_manifest.csv"
     if ntpath.exists(manifest_file):
-        df = pd.read_csv(manifest_file)
-        if df.empty:
-            print("You need to clean the folder before starting again!")
-        else:
-            if split_only:
-                print("*** You can't 'split only' while the old task didnt finish ***")
-            print("Resuming From the last task !!!")
-            file_worker(leak_name, dir_path)
+        print("Resuming From the last task !!!")
+        file_worker(leak_name, dir_path)
     else:
         print("Splitting the File Now")
         Filesplit().split(file=leak_name, split_size=chunk_size, output_dir=dir_path, newline=True)
@@ -151,8 +147,47 @@ def file_worker(leak_name, dir_path):
     print(f"Run time(s): {run_time}")
 
 
+def folder_cleaner(path):
+    for root, dirs, files in os.walk(path):
+        for f in files:
+            os.unlink(os.path.join(root, f))
+        for d in dirs:
+            shutil.rmtree(os.path.join(root, d))
+
+
+def init():
+    leaks_folder = "Leaks_Folder"
+    unprocessed_leaks = r"\Unprocessed_Leaks"
+    cur_dir = ntpath.dirname(ntpath.realpath(__file__))
+    manifest_file = cur_dir + unprocessed_leaks + r"\fs_manifest.csv"
+    if not ntpath.isdir(leaks_folder):
+        os.makedirs(leaks_folder)
+    if not ntpath.isdir(unprocessed_leaks):
+        os.makedirs(unprocessed_leaks)
+
+    if ntpath.exists(manifest_file):
+        # check if manifest file is inside unprocessed_leaks
+        df = pd.read_csv(manifest_file)
+        if df.empty:
+            # check if manifest file is empty or not
+            dir_contents = os.listdir(cur_dir + unprocessed_leaks)
+            if len(dir_contents) == 0:
+                print('Folder is Empty')
+            else:
+                # Folder is Not Empty deleting all files
+                folder_cleaner(cur_dir + unprocessed_leaks)
+                init()
+        else:
+            # manifest file not empty
+            print("Unprocessed_Leaks Folder is not Empty")
+    else:
+        # manifest file not found !!!
+        print("Manifest file not found!")
+
+
 if __name__ == "__main__":
     Chunks = 1000000
-    dir_path = ntpath.dirname(ntpath.realpath(__file__))
+    #dir_path = ntpath.dirname(ntpath.realpath(__file__))
     # do not name the leak with numbers or underscore
-    split(dir_path + r"\test\France-Hostpital.txt", Chunks, split_only=False)
+    print(init())
+    #split(dir_path + r"\Unprocessed_Leaks\clubhouse.txt", Chunks, split_only=False)
