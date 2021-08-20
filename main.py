@@ -161,11 +161,10 @@ def update_leak_list():
     cur_dir = ntpath.dirname(ntpath.realpath(__file__)) + "/Leaks_Folder"
     if not os.listdir(cur_dir):
         return False
-    else:
-        list_of_files = sorted(filter(lambda x: os.path.isfile(os.path.join(cur_dir, x)), os.listdir(cur_dir)))
-        df = pd.DataFrame(list_of_files, columns=["Leaks"])
-        df.to_csv('leak_list.csv', index=False)
-        return True
+    list_of_files = sorted(filter(lambda x: os.path.isfile(os.path.join(cur_dir, x)), os.listdir(cur_dir)))
+    df = pd.DataFrame(list_of_files, columns=["Leaks"])
+    df.to_csv('leak_list.csv', index=False)
+    return True
 
 
 def end_time():
