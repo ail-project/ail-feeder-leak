@@ -242,6 +242,6 @@ def init(chunk_size):
 
 if __name__ == "__main__":
     # do not name the leak with numbers or underscore
-    # todo renaming the leaks remove  _ and .
+    # fixme renaming the leaks remove  _ and .
     Chunks = 1000000
     init(Chunks)
