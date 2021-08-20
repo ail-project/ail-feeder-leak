@@ -7,6 +7,8 @@ import ntpath
 import os
 import re
 import shutil
+import sys
+import threading
 import time
 from threading import Event
 
@@ -17,6 +19,10 @@ from fsplit.filesplit import Filesplit
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 start_time = time.time()
+
+
+sys.setrecursionlimit(10**7) # max depth of recursion
+threading.stack_size(2**27)  # new thread will get stack of such size
 
 
 def ail_publish(apikey, manifest_file, file_name, data=None):
@@ -71,7 +77,7 @@ def ail(leak_name, file_name, file_sha256, file_content, manifest_file):
     ail_api = "cpJOIjpuUMdOu69r3vdJCofeS9On5iRMZC350H5ol"
     print("Checking AIL API...")
     if check_ail(ail_api):
-        print("AIL API is GOOD!")
+        print("AIL is UP!")
         print("Starting to process content of: " + file_name)
         print("The sha256 of " + file_name + " content is : " + file_sha256)
         list2str = ''.join(str(e) for e in file_content)
@@ -91,19 +97,17 @@ def ail(leak_name, file_name, file_sha256, file_content, manifest_file):
         print("Connection error !")
 
 
-def split(leak_name, chunk_size, split_only=False):
+def split(leak_name, chunk_size):
     dir_path = ntpath.dirname(ntpath.realpath(leak_name))
     manifest_file = dir_path + r"\fs_manifest.csv"
     if ntpath.exists(manifest_file):
-        print("Resuming From the last task !!!")
-        file_worker(leak_name, dir_path)
+        print("Resuming From the last task")
+        file_worker(leak_name, dir_path, chunk_size)
     else:
         print("Splitting the File Now")
         Filesplit().split(file=leak_name, split_size=chunk_size, output_dir=dir_path, newline=True)
         print("File split successfully")
-        if not split_only:
-            file_worker(leak_name, dir_path)
-            print("Unable to locate manifest file")
+        file_worker(leak_name, dir_path, chunk_size)
 
 
 def remove_split_manifest(file, column_name, *args):
@@ -119,7 +123,7 @@ def remove_split_manifest(file, column_name, *args):
         print(e)
 
 
-def file_worker(leak_name, dir_path):
+def file_worker(leak_name, dir_path, chunk_size):
     print("Starting to process splits")
     manifest_file = dir_path + r"\fs_manifest.csv"
     if not ntpath.isdir(dir_path):
@@ -142,9 +146,7 @@ def file_worker(leak_name, dir_path):
                     file_sha256 = hashlib.sha256(f.read(file_size)).hexdigest()
                 ail(leak_name, file_name, file_sha256, file_lines, manifest_file)
                 Event().wait(0.5)
-                break
-    run_time = (time.time() - start_time)
-    print(f"Run time(s): {run_time}")
+    init(chunk_size)
 
 
 def folder_cleaner(path):
@@ -155,39 +157,91 @@ def folder_cleaner(path):
             shutil.rmtree(os.path.join(root, d))
 
 
-def init():
+def update_leak_list():
+    cur_dir = ntpath.dirname(ntpath.realpath(__file__)) + "/Leaks_Folder"
+    if not os.listdir(cur_dir):
+        return False
+    else:
+        list_of_files = sorted(filter(lambda x: os.path.isfile(os.path.join(cur_dir, x)), os.listdir(cur_dir)))
+        df = pd.DataFrame(list_of_files, columns=["Leaks"])
+        df.to_csv('leak_list.csv', index=False)
+        return True
+
+
+def end_time():
+    run_time = (time.time() - start_time)
+    print(f"Run time(s): {run_time}")
+
+
+def move_new_leak():
+    if update_leak_list():
+        cur_dir = ntpath.dirname(ntpath.realpath(__file__))
+        leak_list = cur_dir + r'\leak_list.csv'
+        file_name = ((pd.read_csv(leak_list).values[0]).tolist())[0]
+        leak_source_path = f"{cur_dir + r'/Leaks_Folder'}/{file_name}"
+        leak_destination_path = cur_dir + r"\Unprocessed_Leaks"
+        if ntpath.exists(leak_source_path):
+            new_location = shutil.move(leak_source_path, leak_destination_path)
+            file = open("current_leak.txt", "w")
+            file.write(new_location)
+            file.close()
+            return True
+    else:
+        return False
+
+
+def init(chunk_size):
     leaks_folder = "Leaks_Folder"
     unprocessed_leaks = r"\Unprocessed_Leaks"
     cur_dir = ntpath.dirname(ntpath.realpath(__file__))
     manifest_file = cur_dir + unprocessed_leaks + r"\fs_manifest.csv"
+
     if not ntpath.isdir(leaks_folder):
         os.makedirs(leaks_folder)
+
     if not ntpath.isdir(unprocessed_leaks):
         os.makedirs(unprocessed_leaks)
 
-    if ntpath.exists(manifest_file):
-        # check if manifest file is inside unprocessed_leaks
-        df = pd.read_csv(manifest_file)
-        if df.empty:
-            # check if manifest file is empty or not
-            dir_contents = os.listdir(cur_dir + unprocessed_leaks)
-            if len(dir_contents) == 0:
-                print('Folder is Empty')
-            else:
-                # Folder is Not Empty deleting all files
-                folder_cleaner(cur_dir + unprocessed_leaks)
-                init()
+    if update_leak_list():
+        if not ntpath.exists(cur_dir + r"\current_leak.txt"):
+            print("Starting New Process")
+            move_new_leak()
+            leak_name = open("current_leak.txt", "r+").read()
+            split(leak_name, chunk_size)
+
         else:
-            # manifest file not empty
-            print("Unprocessed_Leaks Folder is not Empty")
+            if ntpath.exists(manifest_file):
+                df = pd.read_csv(manifest_file)
+                if df.empty:
+                    # Manifest empty but Folder is Not Empty, cleaning folder
+                    print("Cleaning last task")
+                    folder_cleaner(cur_dir + unprocessed_leaks)
+                    init(chunk_size)
+                else:
+                    print("Processing from the last task")
+                    # continue the work as manifest not empty and folder not empty
+                    leak_name = open("current_leak.txt", "r+").read()
+                    split(leak_name, chunk_size)
+            else:
+                # manifest file not found, means i need to take a file from another folder and move it for work!
+                if move_new_leak():
+                    print("Processing new task")
+                    leak_name = open("current_leak.txt", "r+").read()
+                    split(leak_name, chunk_size)
+                else:
+                    print("No more leaks to process")
+                    if ntpath.exists(cur_dir + r"\current_leak.txt"):
+                        os.remove(cur_dir + r"\current_leak.txt")
+                    if ntpath.exists(cur_dir + r"\leak_list.csv"):
+                        os.remove(cur_dir + r"\leak_list.csv")
+                        end_time()
     else:
-        # manifest file not found !!!
-        print("Manifest file not found!")
+        print("Leaks Folder is Empty !")
+        end_time()
 
 
 if __name__ == "__main__":
-    Chunks = 1000000
-    #dir_path = ntpath.dirname(ntpath.realpath(__file__))
     # do not name the leak with numbers or underscore
-    print(init())
-    #split(dir_path + r"\Unprocessed_Leaks\clubhouse.txt", Chunks, split_only=False)
+    # todo renaming the leaks remove  _ and .
+    Chunks = 1000000
+    init(Chunks)
