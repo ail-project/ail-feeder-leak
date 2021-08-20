@@ -1,3 +1,4 @@
+import ast
 import base64
 import csv
 import datetime
@@ -117,7 +118,7 @@ def remove_split_manifest(file, column_name, *args):
     try:
         df = pd.read_csv(file)
         for row in row_to_remove:
-            df = df[eval("df.{}".format(column_name)) != row]
+            df = df[ast.literal_eval("df.{}".format(column_name)) != row]
         df.to_csv(file, index=False)
     except Exception as e:
         print(e)
