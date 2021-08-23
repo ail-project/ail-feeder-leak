@@ -13,7 +13,7 @@ pip3 install -U -r requirements.txt
 ```
 
 ## TODO
-
--Config file
--Decompress automatically files
--Iterate inside folder inside "Leaks_Folder"
+##### -renaming the files to remove _ and .
+##### -Config file
+##### -Decompress automatically files
+##### -Iterate inside folder inside "Leaks_Folder"
