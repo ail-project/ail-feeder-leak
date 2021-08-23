@@ -1,16 +1,24 @@
 # Ail LeakFeeder
-AIL LeakFeeder: A Module for AIL Framework that automate the process to feed leaked files automatically to AIL
 
->Run it first to create the folders for you, All your Leaks should be inside "Leaks_Folder" and run it, it will proccess them to another folder called "Unprocessed_Leaks"
-> The current Default file chunking is 500k "Chunks = 500000" can be changed.
+AIL LeakFeeder: A Module for AIL Framework that automates the process to feed leaked files automatically to AIL, So basically this feeder will help you ingest AIL with your leaked files automatically.
 
-## Install & Requirements
+
+## How to use it
+
+##### First Runt the script to create the folders for you after installing the requirements
+
+##### You need to add your leaked files into a folder called "Leaks_Folder", Run the script!
+
+## Requirements
 
 Install the Python dependencies:
 
 ```
 pip3 install -U -r requirements.txt
 ```
+## Notes
+
+##### The current Default file chunking is 500k "Chunks = 500000" can be changed.
 
 ## TODO
 ##### -renaming the files to remove _ and .
