@@ -1,5 +1,7 @@
 /.idea/
 /test/
 /venv/
-/Leaks_Folder/clubhouse.txt
-/Leaks_Folder/desktop.ini
+/Leaks_Folder/
+/Unprocessed_Leaks/
+/current_leak.txt
+/leak_list.csv

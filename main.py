@@ -88,7 +88,7 @@ def ail(leak_name, file_name, file_sha256, file_content, manifest_file):
         output['source-uuid'] = uuid
         output['default-encoding'] = 'UTF-8'
         output['meta'] = {}
-        output['meta']['Leaked:File Name'] = ntpath.basename(leak_name)
+        output['meta']['Leaked:FileName'] = ntpath.basename(leak_name)
         output['meta']['Leaked:Chunked'] = file_name
         output['data-sha256'] = file_sha256
         output['data'] = compressed_base64
@@ -189,6 +189,9 @@ def move_new_leak():
     else:
         return False
 
+# ospath
+
+
 
 def init(chunk_size):
     leaks_folder = "Leaks_Folder"
@@ -243,5 +246,5 @@ def init(chunk_size):
 if __name__ == "__main__":
     # do not name the leak with numbers or underscore
     # renaming the leaks remove  _ and .
-    Chunks = 1000000
+    Chunks = 500000
     init(Chunks)
