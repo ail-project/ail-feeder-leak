@@ -189,9 +189,6 @@ def move_new_leak():
     else:
         return False
 
-# ospath
-
-
 
 def init(chunk_size):
     leaks_folder = "Leaks_Folder"
@@ -246,5 +243,6 @@ def init(chunk_size):
 if __name__ == "__main__":
     # do not name the leak with numbers or underscore
     # renaming the leaks remove  _ and .
+    # ospath
     Chunks = 500000
     init(Chunks)
