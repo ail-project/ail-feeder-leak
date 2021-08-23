@@ -21,9 +21,8 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 start_time = time.time()
 
-
-sys.setrecursionlimit(10**7) # max depth of recursion
-threading.stack_size(2**27)  # new thread will get stack of such size
+sys.setrecursionlimit(10 ** 7)  # max depth of recursion
+threading.stack_size(2 ** 27)  # new thread will get stack of such size
 
 
 def ail_publish(apikey, manifest_file, file_name, data=None):
@@ -37,16 +36,15 @@ def ail_publish(apikey, manifest_file, file_name, data=None):
         if "status" in ail_response.text:
             if data.get("status") == "success":
                 print(file_name + ": Successfully Pushed to Ail")
-                filepath = ntpath.join(ntpath.dirname(ntpath.realpath(manifest_file)), file_name)
+                previous_file_by_number = re.findall(r"[-+]?\d*\.\d+|\d+", file_name.split('_')[1])
+                file_to_del = file_name.split('_')[0] + "_" + str(int(previous_file_by_number[0]) - 1) + ".txt"
+                filepath = ntpath.join(ntpath.dirname(ntpath.realpath(manifest_file)), file_to_del)
                 if os.path.exists(filepath):
-                    previous_file = re.findall(r"[-+]?\d*\.\d+|\d+", file_name.split('_')[1])
-                    if not int(previous_file[0]) - 1 == 0:
-                        file_to_del = file_name.split('_')[0] + "_" + str(int(previous_file[0]) - 1) + ".txt"
-                        os.unlink(ntpath.join(ntpath.dirname(ntpath.realpath(manifest_file)), file_to_del))
-                    remove_split_manifest(manifest_file, "filename", file_name)
-                    return True
+                    os.unlink(ntpath.join(ntpath.dirname(ntpath.realpath(manifest_file)), file_to_del))
+                remove_split_manifest(manifest_file, "filename", file_name)
+                return True
             if data.get("status") == "error":
-                print(data.get("status"))
+                print(data.get("reason"))
     except Exception as e:
         print(e)
 
@@ -55,14 +53,13 @@ def check_ail(apikey):
     try:
         ail_ping = "https://192.168.179.128:7000/api/v1/ping"
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-        ail_response = requests.get(ail_ping, headers={'Content-Type': 'application/json', 'Authorization': apikey},
-                                    verify=False)
+        ail_response = requests.get(ail_ping, headers={'Content-Type': 'application/json', 'Authorization': apikey},verify=False)
         data = ail_response.json()
         if "status" in ail_response.text:
             if data.get("status") == "pong":
                 return True
             if data.get("status") == "error":
-                print(data.get("status"))
+                return data.get("reason")
     except Exception as e:
         print(e)
 
@@ -75,10 +72,10 @@ def jsonclean(o):
 def ail(leak_name, file_name, file_sha256, file_content, manifest_file):
     ail_feeder_type = "Leak_feeder"
     uuid = "17450648-9581-42a6-b7c4-28c13f4664bf"
-    ail_api = "cpJOIjpuUMdOu69r3vdJCofeS9On5iRMZC350H5ol"
+    ail_api = "Ea4f6CSevmwECqagrv9Fd8WlfiSF-BzlCuxHfHuqO"
     print("Checking AIL API...")
-    if check_ail(ail_api):
-        print("AIL is UP!")
+    check_ail_resp = check_ail(ail_api)
+    if check_ail_resp:
         print("Starting to process content of: " + file_name)
         print("The sha256 of " + file_name + " content is : " + file_sha256)
         list2str = ''.join(str(e) for e in file_content)
@@ -93,9 +90,11 @@ def ail(leak_name, file_name, file_sha256, file_content, manifest_file):
         output['data-sha256'] = file_sha256
         output['data'] = compressed_base64
         Event().wait(0.5)
-        ail_publish(ail_api, manifest_file, file_name, data=json.dumps(output, indent=4, sort_keys=True, default=str))
+        ail_pub_res = ail_publish(ail_api, manifest_file, file_name,data=json.dumps(output, indent=4, sort_keys=True, default=str))
+        if not ail_pub_res:
+            return ail_pub_res
     else:
-        print("Connection error !")
+        return check_ail_resp
 
 
 def split(leak_name, chunk_size):
@@ -118,7 +117,7 @@ def remove_split_manifest(file, column_name, *args):
     try:
         df = pd.read_csv(file)
         for row in row_to_remove:
-            df = df[ast.literal_eval("df.{}".format(column_name)) != row]
+            df = df[eval("df.{}".format(column_name)) != row]
         df.to_csv(file, index=False)
     except Exception as e:
         print(e)
@@ -213,17 +212,14 @@ def init(chunk_size):
             if ntpath.exists(manifest_file):
                 df = pd.read_csv(manifest_file)
                 if df.empty:
-                    # Manifest empty but Folder is Not Empty, cleaning folder
                     print("Cleaning last task")
                     folder_cleaner(cur_dir + unprocessed_leaks)
                     init(chunk_size)
                 else:
                     print("Processing from the last task")
-                    # continue the work as manifest not empty and folder not empty
                     leak_name = open("current_leak.txt", "r+").read()
                     split(leak_name, chunk_size)
             else:
-                # manifest file not found, means i need to take a file from another folder and move it for work!
                 if move_new_leak():
                     print("Processing new task")
                     leak_name = open("current_leak.txt", "r+").read()
@@ -243,6 +239,5 @@ def init(chunk_size):
 if __name__ == "__main__":
     # do not name the leak with numbers or underscore
     # renaming the leaks remove  _ and .
-    # ospath
     Chunks = 500000
     init(Chunks)
