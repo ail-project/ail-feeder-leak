@@ -5,7 +5,7 @@ AIL LeakFeeder: A Module for AIL Framework that automates the process to feed le
 
 ## How to use it
 
-##### First Runt the script to create the folders for you after installing the requirements
+##### First Run the script to create the folders for you after installing the requirements
 
 ##### You need to add your leaked files into a folder called "Leaks_Folder", Run the script!
 
