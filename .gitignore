@@ -1,0 +1,7 @@
+/.idea/
+/test/
+/venv/
+/Leaks_Folder/
+/Unprocessed_Leaks/
+/current_leak.txt
+/leak_list.csv
