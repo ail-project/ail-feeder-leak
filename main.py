@@ -4,7 +4,6 @@ import csv
 import datetime
 import gzip
 import hashlib
-import ntpath
 import os
 import re
 import shutil
@@ -12,7 +11,7 @@ import sys
 import threading
 import time
 from threading import Event
-
+from pathlib import Path
 import pandas as pd
 import requests
 import simplejson as json
@@ -24,10 +23,11 @@ start_time = time.time()
 sys.setrecursionlimit(10 ** 7)  # max depth of recursion
 threading.stack_size(2 ** 27)  # new thread will get stack of such size
 
+AIL_API_URL = 'https://localhost:7000/api/v1'
 
 def ail_publish(apikey, manifest_file, file_name, data=None):
     try:
-        ail_url = "https://192.168.179.128:7000/api/v1/import/json/item"
+        ail_url = f"{AIL_API_URL}/import/json/item"
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
         ail_response = requests.post(ail_url, headers={'Content-Type': 'application/json', 'Authorization': apikey},
                                      data=data, verify=False)
@@ -38,9 +38,9 @@ def ail_publish(apikey, manifest_file, file_name, data=None):
                 print(file_name + ": Successfully Pushed to Ail")
                 previous_file_by_number = re.findall(r"[-+]?\d*\.\d+|\d+", file_name.split('_')[1])
                 file_to_del = file_name.split('_')[0] + "_" + str(int(previous_file_by_number[0]) - 1) + ".txt"
-                filepath = ntpath.join(ntpath.dirname(ntpath.realpath(manifest_file)), file_to_del)
+                filepath = os.path.join(os.path.dirname(os.path.realpath(manifest_file)), file_to_del)
                 if os.path.exists(filepath):
-                    os.unlink(ntpath.join(ntpath.dirname(ntpath.realpath(manifest_file)), file_to_del))
+                    os.unlink(os.path.join(os.path.dirname(os.path.realpath(manifest_file)), file_to_del))
                 remove_split_manifest(manifest_file, "filename", file_name)
                 return True
             if data.get("status") == "error":
@@ -51,7 +51,7 @@ def ail_publish(apikey, manifest_file, file_name, data=None):
 
 def check_ail(apikey):
     try:
-        ail_ping = "https://192.168.179.128:7000/api/v1/ping"
+        ail_ping = f"{AIL_API_URL}/ping"
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
         ail_response = requests.get(ail_ping, headers={'Content-Type': 'application/json', 'Authorization': apikey},verify=False)
         data = ail_response.json()
@@ -76,8 +76,8 @@ def ail(leak_name, file_name, file_sha256, file_content, manifest_file):
     print("Checking AIL API...")
     check_ail_resp = check_ail(ail_api)
     if check_ail_resp:
-        print("Starting to process content of: " + file_name)
-        print("The sha256 of " + file_name + " content is : " + file_sha256)
+        print(f"Starting to process content of: {file_name}")
+        print(f"The sha256 of {file_name} content is : {file_sha256}")
         list2str = ''.join(str(e) for e in file_content)
         compressed_base64 = base64.b64encode(gzip.compress(list2str.encode('utf-8'))).decode()
         output = {}
@@ -85,7 +85,7 @@ def ail(leak_name, file_name, file_sha256, file_content, manifest_file):
         output['source-uuid'] = uuid
         output['default-encoding'] = 'UTF-8'
         output['meta'] = {}
-        output['meta']['Leaked:FileName'] = ntpath.basename(leak_name)
+        output['meta']['Leaked:FileName'] = os.path.basename(leak_name)
         output['meta']['Leaked:Chunked'] = file_name
         output['data-sha256'] = file_sha256
         output['data'] = compressed_base64
@@ -98,9 +98,9 @@ def ail(leak_name, file_name, file_sha256, file_content, manifest_file):
 
 
 def split(leak_name, chunk_size):
-    dir_path = ntpath.dirname(ntpath.realpath(leak_name))
-    manifest_file = dir_path + r"\fs_manifest.csv"
-    if ntpath.exists(manifest_file):
+    dir_path = os.path.dirname(os.path.realpath(leak_name))
+    manifest_file = os.path.join(dir_path, "fs_manifest.csv")
+    if os.path.exists(manifest_file):
         print("Resuming From the last task")
         file_worker(leak_name, dir_path, chunk_size)
     else:
@@ -125,11 +125,11 @@ def remove_split_manifest(file, column_name, *args):
 
 def file_worker(leak_name, dir_path, chunk_size):
     print("Starting to process splits")
-    manifest_file = dir_path + r"\fs_manifest.csv"
-    if not ntpath.isdir(dir_path):
+    manifest_file = os.path.join(dir_path, "fs_manifest.csv")
+    if not os.path.isdir(dir_path):
         print("Input directory is not a valid directory")
 
-    if not ntpath.exists(manifest_file):
+    if not os.path.exists(manifest_file):
         print("Unable to locate manifest file")
 
     print("Processing Data from splits")
@@ -137,7 +137,7 @@ def file_worker(leak_name, dir_path, chunk_size):
         manifest_reader = csv.DictReader(f=reader)
         for manifest_files in manifest_reader:
             file_name = manifest_files.get("filename")
-            file_content = ntpath.join(dir_path, manifest_files.get("filename"))
+            file_content = os.path.join(dir_path, manifest_files.get("filename"))
             file_size = int(manifest_files.get("filesize"))
             with open(file_content, encoding="utf8", errors='ignore') as f:
                 Event().wait(0.5)
@@ -158,7 +158,9 @@ def folder_cleaner(path):
 
 
 def update_leak_list():
-    cur_dir = ntpath.dirname(ntpath.realpath(__file__)) + "/Leaks_Folder"
+    dirname = Path(os.path.realpath(__file__))
+    cur_dir = os.path.join(dirname.resolve().parent, "Leaks_Folder")
+    
     if not os.listdir(cur_dir):
         return False
     list_of_files = sorted(filter(lambda x: os.path.isfile(os.path.join(cur_dir, x)), os.listdir(cur_dir)))
@@ -174,12 +176,12 @@ def end_time():
 
 def move_new_leak():
     if update_leak_list():
-        cur_dir = ntpath.dirname(ntpath.realpath(__file__))
-        leak_list = cur_dir + r'\leak_list.csv'
+        cur_dir = os.path.dirname(os.path.realpath(__file__))
+        leak_list = os.path.join(cur_dir, 'leak_list.csv')
         file_name = ((pd.read_csv(leak_list).values[0]).tolist())[0]
-        leak_source_path = f"{cur_dir + r'/Leaks_Folder'}/{file_name}"
-        leak_destination_path = cur_dir + r"\Unprocessed_Leaks"
-        if ntpath.exists(leak_source_path):
+        leak_source_path = os.path.join(cur_dir, 'Leaks_Folder', file_name)
+        leak_destination_path = os.path.join(cur_dir, "Unprocessed_Leaks")
+        if os.path.exists(leak_source_path):
             new_location = shutil.move(leak_source_path, leak_destination_path)
             file = open("current_leak.txt", "w")
             file.write(new_location)
@@ -191,29 +193,29 @@ def move_new_leak():
 
 def init(chunk_size):
     leaks_folder = "Leaks_Folder"
-    unprocessed_leaks = r"\Unprocessed_Leaks"
-    cur_dir = ntpath.dirname(ntpath.realpath(__file__))
-    manifest_file = cur_dir + unprocessed_leaks + r"\fs_manifest.csv"
+    unprocessed_leaks = "Unprocessed_Leaks"
+    cur_dir = os.path.dirname(os.path.realpath(__file__))
+    manifest_file = os.path.join(cur_dir, unprocessed_leaks, "fs_manifest.csv")
 
-    if not ntpath.isdir(leaks_folder):
+    if not os.path.isdir(leaks_folder):
         os.makedirs(leaks_folder)
 
-    if not ntpath.isdir(unprocessed_leaks):
+    if not os.path.isdir(unprocessed_leaks):
         os.makedirs(unprocessed_leaks)
 
     if update_leak_list():
-        if not ntpath.exists(cur_dir + r"\current_leak.txt"):
+        if not os.path.exists(os.path.join(cur_dir, "current_leak.txt")):
             print("Starting New Process")
             move_new_leak()
             leak_name = open("current_leak.txt", "r+").read()
             split(leak_name, chunk_size)
 
         else:
-            if ntpath.exists(manifest_file):
+            if os.path.exists(manifest_file):
                 df = pd.read_csv(manifest_file)
                 if df.empty:
                     print("Cleaning last task")
-                    folder_cleaner(cur_dir + unprocessed_leaks)
+                    folder_cleaner(os.path.join(cur_dir, unprocessed_leaks))
                     init(chunk_size)
                 else:
                     print("Processing from the last task")
@@ -226,10 +228,10 @@ def init(chunk_size):
                     split(leak_name, chunk_size)
                 else:
                     print("No more leaks to process")
-                    if ntpath.exists(cur_dir + r"\current_leak.txt"):
-                        os.remove(cur_dir + r"\current_leak.txt")
-                    if ntpath.exists(cur_dir + r"\leak_list.csv"):
-                        os.remove(cur_dir + r"\leak_list.csv")
+                    if os.path.exists(os.path.join(cur_dir, "current_leak.txt")):
+                        os.remove(os.path.join(cur_dir, "current_leak.txt"))
+                    if os.path.exists(os.path.join(cur_dir, "leak_list.txt")):
+                        os.remove(os.path.join(cur_dir, "leak_list.txt"))
                         end_time()
     else:
         print("Leaks Folder is Empty !")
