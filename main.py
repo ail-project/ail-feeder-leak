@@ -1,4 +1,3 @@
-import ast
 import base64
 import csv
 import datetime
@@ -10,8 +9,9 @@ import shutil
 import sys
 import threading
 import time
-from threading import Event
 from pathlib import Path
+from threading import Event
+
 import pandas as pd
 import requests
 import simplejson as json
@@ -24,6 +24,7 @@ sys.setrecursionlimit(10 ** 7)  # max depth of recursion
 threading.stack_size(2 ** 27)  # new thread will get stack of such size
 
 AIL_API_URL = 'https://localhost:7000/api/v1'
+
 
 def ail_publish(apikey, manifest_file, file_name, data=None):
     try:
@@ -53,7 +54,8 @@ def check_ail(apikey):
     try:
         ail_ping = f"{AIL_API_URL}/ping"
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-        ail_response = requests.get(ail_ping, headers={'Content-Type': 'application/json', 'Authorization': apikey},verify=False)
+        ail_response = requests.get(ail_ping, headers={'Content-Type': 'application/json', 'Authorization': apikey},
+                                    verify=False)
         data = ail_response.json()
         if "status" in ail_response.text:
             if data.get("status") == "pong":
@@ -90,7 +92,8 @@ def ail(leak_name, file_name, file_sha256, file_content, manifest_file):
         output['data-sha256'] = file_sha256
         output['data'] = compressed_base64
         Event().wait(0.5)
-        ail_pub_res = ail_publish(ail_api, manifest_file, file_name,data=json.dumps(output, indent=4, sort_keys=True, default=str))
+        ail_pub_res = ail_publish(ail_api, manifest_file, file_name,
+                                  data=json.dumps(output, indent=4, sort_keys=True, default=str))
         if not ail_pub_res:
             return ail_pub_res
     else:
@@ -160,7 +163,7 @@ def folder_cleaner(path):
 def update_leak_list():
     dirname = Path(os.path.realpath(__file__))
     cur_dir = os.path.join(dirname.resolve().parent, "Leaks_Folder")
-    
+
     if not os.listdir(cur_dir):
         return False
     list_of_files = sorted(filter(lambda x: os.path.isfile(os.path.join(cur_dir, x)), os.listdir(cur_dir)))
@@ -203,6 +206,7 @@ def init(chunk_size):
     if not os.path.isdir(unprocessed_leaks):
         os.makedirs(unprocessed_leaks)
 
+    # bellow there is a known bug fix later
     if update_leak_list():
         if not os.path.exists(os.path.join(cur_dir, "current_leak.txt")):
             print("Starting New Process")
@@ -239,7 +243,5 @@ def init(chunk_size):
 
 
 if __name__ == "__main__":
-    # do not name the leak with numbers or underscore
-    # renaming the leaks remove  _ and .
     Chunks = 500000
     init(Chunks)

@@ -21,7 +21,13 @@ pip3 install -U -r requirements.txt
 ##### The current Default file chunking is 500k "Chunks = 500000" can be changed.
 
 ## TODO
+
 ##### -renaming the files to remove _ and .
 ##### -Config file
 ##### -Decompress automatically files
 ##### -Iterate inside folder inside "Leaks_Folder"
+
+## Contributors ✨
+
+Thanks to all the wonderful contributors 
+
