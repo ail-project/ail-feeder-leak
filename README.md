@@ -32,7 +32,7 @@ chunks: 100000
 api_key: <your AIL API key>
 # AIL API URL
 ail_url: https://<your AIL server>:<AIL port>/api/v1
-# Uniq identifier of the feeder => https://www.uuidgenerator.net/version4
+# Uniq identifier of the feeder ( https://www.uuidgenerator.net/version4 )
 uuid: 17450648-9581-42a6-b7c4-28c13f4664bf
 # Time sleep between API calls in seconds
 wait: 0.5
