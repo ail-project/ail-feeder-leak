@@ -1,11 +1,11 @@
 # Name of the feeder
-name: Leak_feeder
+name: LeakFeeder
 # Leaks Folder to parse and send to AIL
 leaks_folder: Leaks_Folder
 # Output Folder of unprocessed split files
 out_folder: Unprocessed_Leaks
 # Chunks size of split files
-chunks: 500000
+chunks: 100000
 # API key for AIL authentication
 api_key: <your AIL API key>
 # AIL API URL
