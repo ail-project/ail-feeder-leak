@@ -23,17 +23,19 @@ start_time = time.time()
 sys.setrecursionlimit(10 ** 7)  # max depth of recursion
 threading.stack_size(2 ** 27)  # new thread will get stack of such size
 
-AIL_API_URL = 'https://localhost:7000/api/v1'
+
+# Feeder configuration dict
+CONFIG = None
 
 
 def ail_publish(apikey, manifest_file, file_name, data=None):
     try:
-        ail_url = f"{AIL_API_URL}/import/json/item"
+        ail_url = f"{CONFIG.ail_url}/import/json/item"
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
         ail_response = requests.post(ail_url, headers={'Content-Type': 'application/json', 'Authorization': apikey},
                                      data=data, verify=False)
         data = ail_response.json()
-        Event().wait(0.5)
+        Event().wait(CONFIG.wait)
         if "status" in ail_response.text:
             if data.get("status") == "success":
                 print(file_name + ": Successfully Pushed to Ail")
@@ -52,7 +54,7 @@ def ail_publish(apikey, manifest_file, file_name, data=None):
 
 def check_ail(apikey):
     try:
-        ail_ping = f"{AIL_API_URL}/ping"
+        ail_ping = f"{CONFIG.ail_url}/ping"
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
         ail_response = requests.get(ail_ping, headers={'Content-Type': 'application/json', 'Authorization': apikey},
                                     verify=False)
@@ -72,9 +74,9 @@ def jsonclean(o):
 
 
 def ail(leak_name, file_name, file_sha256, file_content, manifest_file):
-    ail_feeder_type = "Leak_feeder"
-    uuid = "17450648-9581-42a6-b7c4-28c13f4664bf"
-    ail_api = "Ea4f6CSevmwECqagrv9Fd8WlfiSF-BzlCuxHfHuqO"
+    ail_feeder_type = CONFIG.name
+    uuid = CONFIG.uuid
+    ail_api = CONFIG.api_key
     print("Checking AIL API...")
     check_ail_resp = check_ail(ail_api)
     if check_ail_resp:
@@ -91,7 +93,7 @@ def ail(leak_name, file_name, file_sha256, file_content, manifest_file):
         output['meta']['Leaked:Chunked'] = file_name
         output['data-sha256'] = file_sha256
         output['data'] = compressed_base64
-        Event().wait(0.5)
+        Event().wait(CONFIG.wait)
         ail_pub_res = ail_publish(ail_api, manifest_file, file_name,
                                   data=json.dumps(output, indent=4, sort_keys=True, default=str))
         if not ail_pub_res:
@@ -143,13 +145,13 @@ def file_worker(leak_name, dir_path, chunk_size):
             file_content = os.path.join(dir_path, manifest_files.get("filename"))
             file_size = int(manifest_files.get("filesize"))
             with open(file_content, encoding="utf8", errors='ignore') as f:
-                Event().wait(0.5)
+                Event().wait(CONFIG.wait)
                 file_lines = f.readlines()
                 with open(file_content, "rb") as f:
                     file_sha256 = hashlib.sha256(f.read(file_size)).hexdigest()
                 ail(leak_name, file_name, file_sha256, file_lines, manifest_file)
-                Event().wait(0.5)
-    init(chunk_size)
+                Event().wait(CONFIG.wait)
+    run()
 
 
 def folder_cleaner(path):
@@ -162,7 +164,7 @@ def folder_cleaner(path):
 
 def update_leak_list():
     dirname = Path(os.path.realpath(__file__))
-    cur_dir = os.path.join(dirname.resolve().parent, "Leaks_Folder")
+    cur_dir = os.path.join(dirname.resolve().parent, CONFIG.leaks_folder)
 
     if not os.listdir(cur_dir):
         return False
@@ -182,8 +184,8 @@ def move_new_leak():
         cur_dir = os.path.dirname(os.path.realpath(__file__))
         leak_list = os.path.join(cur_dir, 'leak_list.csv')
         file_name = ((pd.read_csv(leak_list).values[0]).tolist())[0]
-        leak_source_path = os.path.join(cur_dir, 'Leaks_Folder', file_name)
-        leak_destination_path = os.path.join(cur_dir, "Unprocessed_Leaks")
+        leak_source_path = os.path.join(cur_dir, CONFIG.leaks_folder, file_name)
+        leak_destination_path = os.path.join(cur_dir, CONFIG.err_folder)
         if os.path.exists(leak_source_path):
             new_location = shutil.move(leak_source_path, leak_destination_path)
             file = open("current_leak.txt", "w")
@@ -194,12 +196,12 @@ def move_new_leak():
         return False
 
 
-def init(chunk_size):
-    leaks_folder = "Leaks_Folder"
-    unprocessed_leaks = "Unprocessed_Leaks"
+def run():
+    leaks_folder = CONFIG.leaks_folder
+    unprocessed_leaks = CONFIG.err_folder
     cur_dir = os.path.dirname(os.path.realpath(__file__))
     manifest_file = os.path.join(cur_dir, unprocessed_leaks, "fs_manifest.csv")
-
+    chunk_size = CONFIG.chunks
     if not os.path.isdir(leaks_folder):
         os.makedirs(leaks_folder)
 
@@ -220,7 +222,7 @@ def init(chunk_size):
                 if df.empty:
                     print("Cleaning last task")
                     folder_cleaner(os.path.join(cur_dir, unprocessed_leaks))
-                    init(chunk_size)
+                    run()
                 else:
                     print("Processing from the last task")
                     leak_name = open("current_leak.txt", "r+").read()
@@ -241,7 +243,22 @@ def init(chunk_size):
         print("Leaks Folder is Empty !")
         end_time()
 
+import configargparse
 
 if __name__ == "__main__":
-    Chunks = 500000
-    init(Chunks)
+
+    args_parser = configargparse.ArgParser(default_config_files=['config.yaml'])
+    args_parser.add('-g', '--config', is_config_file=True, help='Configuration file path.')
+    args_parser.add('-n', '--name', help='Name of the feeder.')
+    args_parser.add('-l', '--leaks_folder', help='Leaks Folder to parse and send to AIL.')
+    args_parser.add('-r', '--err_folder', help='Output Folder of unprocessed split files.')
+    args_parser.add('-c', '--chunks', type=int, required=True, env_var='FEEDER_LEAKS_CHUNKS', help='Chunks size of split files.')
+    args_parser.add('-k', '--api_key', help="API key for AIL authentication.")
+    args_parser.add('-u', '--ail_url', help='AIL API URL.')
+    args_parser.add('-i', '--uuid', help='Uniq identifier of the feeder.')
+    args_parser.add('-w', '--wait', type=float, help='Time sleep between API calls in seconds.')
+
+    options = args_parser.parse_args()
+    CONFIG = options
+
+    run()
