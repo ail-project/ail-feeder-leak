@@ -9,9 +9,12 @@ import shutil
 import sys
 import threading
 import time
+import configargparse
 from pathlib import Path
 from threading import Event
 
+import string
+import unicodedata
 import pandas as pd
 import requests
 import simplejson as json
@@ -26,6 +29,8 @@ threading.stack_size(2 ** 27)  # new thread will get stack of such size
 
 # Feeder configuration dict
 CONFIG = None
+
+valid_filename_chars = f"-_ {string.ascii_letters}{string.digits}"
 
 
 def ail_publish(apikey, manifest_file, file_name, data=None):
@@ -169,6 +174,7 @@ def update_leak_list():
     if not os.listdir(cur_dir):
         return False
     list_of_files = sorted(filter(lambda x: os.path.isfile(os.path.join(cur_dir, x)), os.listdir(cur_dir)))
+
     df = pd.DataFrame(list_of_files, columns=["Leaks"])
     df.to_csv('leak_list.csv', index=False)
     return True
@@ -243,7 +249,64 @@ def run():
         print("Leaks Folder is Empty !")
         end_time()
 
-import configargparse
+
+def clean_filename(filename, whitelist=valid_filename_chars, replace=' '):
+    # replace characters
+    for r in replace:
+        filename = filename.replace(r,'_')
+
+    # keep only valid ascii chars
+    cleaned_filename = unicodedata.normalize('NFKD', filename).encode('ASCII', 'ignore').decode()
+
+    # keep only whitelisted chars
+    return ''.join(c for c in cleaned_filename if c in whitelist)
+
+
+
+# Compressed file
+# TODO add compress file management
+# #decompress file
+# try:
+#     if password == None:
+#         files = unpack(file_full_path.encode())
+#         #print(files.children)
+#     else:
+#         try:
+#             files = unpack(file_full_path.encode(), password=password.encode())
+#             #print(files.children)
+#         except sflock.exception.IncorrectUsageException:
+#             self.abord_file_submission(uuid, "Wrong Password")
+#             raise
+#         except:
+#             self.abord_file_submission(uuid, "file decompression error")
+#             raise
+#     self.redis_logger.debug('unpacking {} file'.format(files.unpacker))
+#     if(not files.children):
+#         self.abord_file_submission(uuid, "Empty compressed file")
+#         raise
+#     # set number of files to submit
+#     self.r_serv_log_submit.set(uuid + ':nb_total', len(files.children))
+#     n = 1
+#     for child in files.children:
+#         if self.verify_extention_filename(child.filename.decode()):
+#             self.create_paste(uuid, child.contents, ltags, ltagsgalaxies, uuid+'_'+ str(n) , source)
+#             n = n + 1
+#         else:
+#             self.redis_logger.error("Error in module %s: bad extention"%(self.module_name))
+#             self.addError(uuid, 'Bad file extension: {}'.format(child.filename.decode()) )
+
+# except FileNotFoundError:
+#     self.redis_logger.error("Error in module %s: file not found"%(self.module_name))
+#     self.addError(uuid, 'File not found: {}'.format(file_full_path), uuid )
+
+def is_compressed_type(file_type):
+    """
+    Check if file type is in the list of compressed file extensions format
+    """
+    compressed_type = ['zip', 'gz', 'tar.gz']
+
+    return file_type in compressed_type
+
 
 if __name__ == "__main__":
 
@@ -261,4 +324,13 @@ if __name__ == "__main__":
     options = args_parser.parse_args()
     CONFIG = options
 
-    run()
+
+    dirname = Path(os.path.realpath(__file__))
+    cur_dir = os.path.join(dirname.resolve().parent, CONFIG.leaks_folder)
+    list_of_files = sorted(filter(lambda x: os.path.isfile(os.path.join(cur_dir, x)), os.listdir(cur_dir)))
+    print(list_of_files)
+    for cur_file in list_of_files:
+        print(clean_filename(cur_file))
+
+
+    # run()
