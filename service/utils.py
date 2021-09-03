@@ -6,7 +6,7 @@ import string
 import unicodedata
 
 # Characters authorized in filenames
-WHITELISTED_FILENAME_CHARS = f"-.() {string.ascii_letters}{string.digits}"
+WHITELISTED_FILENAME_CHARS = f"-() {string.ascii_letters}{string.digits}"
 
 
 def clean_filename(filename):
