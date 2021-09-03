@@ -15,7 +15,6 @@ import time
 import configargparse
 from pathlib import Path
 from threading import Event
-
 import string
 import unicodedata
 import configargparse
