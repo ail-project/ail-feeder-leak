@@ -40,8 +40,6 @@ wait: 0.5
 
 ## TODO
 
-##### -renaming the files to remove _ and .
-##### -Decompress automatically files
 ##### -Iterate inside folder inside "Leaks_Folder"
 
 ## Contributors

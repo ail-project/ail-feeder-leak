@@ -1,3 +1,6 @@
+##################################
+# Import External packages
+##################################
 import base64
 import csv
 import datetime
@@ -9,15 +12,23 @@ import shutil
 import sys
 import threading
 import time
+import configargparse
 from pathlib import Path
 from threading import Event
-
+import string
+import unicodedata
 import configargparse
 import pandas as pd
 import requests
 import simplejson as json
 from fsplit.filesplit import Filesplit
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+##################################
+# Import Project packages
+##################################
+from service.utils import get_list_of_files
+
 
 start_time = time.time()
 
@@ -102,7 +113,6 @@ def ail(leak_name, file_name, file_sha256, file_content, manifest_file):
         output['meta']['Leaked:Chunked'] = file_name
         output['data-sha256'] = file_sha256
         output['data'] = comp_b64
-        Event().wait(0.5)
         Event().wait(CONFIG.wait)
         ail_pub_res = ail_publish(ail_api, manifest_file, file_name,
                                   data=json.dumps(output, indent=4, sort_keys=True, default=str))
@@ -166,6 +176,7 @@ def file_worker(leak_name, dir_path):
             file_name = manifest_files.get("filename")
             file_content = os.path.join(dir_path, manifest_files.get("filename"))
             file_size = int(manifest_files.get("filesize"))
+            # TODO add a try: except UnicodeDecodeError: to bypass binary files
             with open(file_content, encoding="utf8", errors='ignore') as f:
                 Event().wait(CONFIG.wait)
                 file_lines = f.readlines()
@@ -195,6 +206,8 @@ def update_leak_list():
     """
     dirname = Path(os.path.realpath(__file__))
     cur_dir = os.path.join(dirname.resolve().parent, CONFIG.leaks_folder)
+    unprocessed_folder = os.path.join(dirname.resolve().parent, CONFIG.out_folder)
+    
 
     if not os.listdir(cur_dir):
         cur_dir = os.path.dirname(os.path.realpath(__file__))
@@ -205,7 +218,10 @@ def update_leak_list():
                 return False
             else:
                 return True
-    list_of_files = sorted(filter(lambda x: os.path.isfile(os.path.join(cur_dir, x)), os.listdir(cur_dir)))
+
+    list_of_files = get_list_of_files(cur_dir, unprocessed_folder)
+    print(f"list_of_files: {list_of_files}")
+
     df = pd.DataFrame(list_of_files, columns=["Leaks"])
     df.to_csv('leak_list.csv', index=False)
     return True
@@ -225,6 +241,8 @@ def move_new_leak():
      if Unprocessed_Leaks is empty else it will continue the previous work
     :rtype: bool
     """
+    result = False
+
     if update_leak_list():
         cur_dir = os.path.dirname(os.path.realpath(__file__))
         leak_list = os.path.join(cur_dir, 'leak_list.csv')
@@ -236,12 +254,15 @@ def move_new_leak():
             with open("current_leak.txt", "w") as file:
                 file.write(new_location)
                 file.close()
-            return True
-    else:
-        return False
+            result = True
+    
+    return result
 
 
 def run():
+    """
+    Run the feeder
+    """
     leaks_folder = CONFIG.leaks_folder
     unprocessed_leaks = CONFIG.out_folder
     cur_dir = os.path.dirname(os.path.realpath(__file__))
