@@ -38,9 +38,6 @@ threading.stack_size(2 ** 27)  # new thread will get stack of such size
 # Feeder configuration dict
 CONFIG = None
 
-# Characters authorized in filenames
-WHITELISTED_FILENAME_CHARS = f"-.() {string.ascii_letters}{string.digits}"
-
 
 def ail_publish(apikey, manifest_file, file_name, data=None):
     """
