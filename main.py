@@ -12,11 +12,9 @@ import shutil
 import sys
 import threading
 import time
-import configargparse
 from pathlib import Path
 from threading import Event
-import string
-import unicodedata
+
 import configargparse
 import pandas as pd
 import requests
@@ -28,7 +26,6 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 # Import Project packages
 ##################################
 from service.utils import get_list_of_files
-
 
 start_time = time.time()
 
@@ -207,7 +204,6 @@ def update_leak_list():
     dirname = Path(os.path.realpath(__file__))
     cur_dir = os.path.join(dirname.resolve().parent, CONFIG.leaks_folder)
     unprocessed_folder = os.path.join(dirname.resolve().parent, CONFIG.out_folder)
-    
 
     if not os.listdir(cur_dir):
         cur_dir = os.path.dirname(os.path.realpath(__file__))
@@ -265,6 +261,7 @@ def run():
     """
     leaks_folder = CONFIG.leaks_folder
     unprocessed_leaks = CONFIG.out_folder
+    unprocessed_folder = CONFIG.unprocessed_folder
     cur_dir = os.path.dirname(os.path.realpath(__file__))
     manifest_file = os.path.join(cur_dir, unprocessed_leaks, "fs_manifest.csv")
     chunk_size = CONFIG.chunks
@@ -273,6 +270,9 @@ def run():
 
     if not os.path.isdir(unprocessed_leaks):
         os.makedirs(unprocessed_leaks)
+
+    if not os.path.isdir(unprocessed_folder):
+        os.makedirs(unprocessed_folder)
 
     if update_leak_list():
         if not os.path.exists(os.path.join(cur_dir, "current_leak.txt")):
@@ -314,6 +314,7 @@ if __name__ == "__main__":
     args_parser.add('-n', '--name', help='Name of the feeder.')
     args_parser.add('-l', '--leaks_folder', help='Leaks Folder to parse and send to AIL.')
     args_parser.add('-r', '--out_folder', help='Output Folder of unprocessed split files.')
+    args_parser.add('-a', '--unprocessed_folder', help='Output Folder of file that cannot be processed.')
     args_parser.add('-c', '--chunks', type=int, required=True, env_var='FEEDER_LEAKS_CHUNKS',
                     help='Chunks size of split files.')
     args_parser.add('-k', '--api_key', help="API key for AIL authentication.")

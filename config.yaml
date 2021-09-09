@@ -4,6 +4,8 @@ name: LeakFeeder
 leaks_folder: Leaks_Folder
 # Output Folder of unprocessed split files
 out_folder: Unprocessed_Leaks
+# Output Folder of file that cannot be processed.
+unprocessed_folder: Unprocessed_files
 # Chunks size of split files
 chunks: 100000
 # API key for AIL authentication
@@ -13,4 +15,4 @@ ail_url: https://<your AIL server>:<AIL port>/api/v1
 # Uniq identifier of the feeder
 uuid: 17450648-9581-42a6-b7c4-28c13f4664bf
 # Time sleep between API calls in seconds
-wait: 0.5
+wait: 1
