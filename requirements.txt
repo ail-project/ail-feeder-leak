@@ -13,4 +13,4 @@ six==1.16.0
 urllib3==1.26.6
 configargparse==1.5.2
 patool==1.12
-python-magic==0.4.24 # Debian/Ubuntu: sudo apt-get install libmagic1 | Windows: pip install python-magic-bin
+python-magic==0.4.24
