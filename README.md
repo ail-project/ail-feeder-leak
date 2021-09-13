@@ -3,7 +3,7 @@
 AIL LeakFeeder: A Module for AIL Framework that automates the process to feed leaked files automatically to AIL, So basically this feeder will help you ingest AIL with your leaked files automatically.
 
 
-![Ail LeakFeeder](https://tonyjabbour.me/wp-content/uploads/2021/09/Data-Leak-Ingestion.png)
+![Ail LeakFeeder](/img/Data%20Leak%20Ingestion.png)
 
 ## How To
 
