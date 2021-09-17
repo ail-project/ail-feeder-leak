@@ -53,14 +53,14 @@ def get_list_of_files(leaks_dir, unprocessed_dir):
         dirname = os.path.dirname(os.path.realpath(__file__))
         parent_dir = os.path.abspath(os.path.join(dirname, os.pardir))
         leak_destination_path = os.path.join(parent_dir, "Unprocessed_files")
-        if if_binary_move(os.path.join(leaks_dir, cur_file),leak_destination_path):
-            print("Binary found and has been moved")
         if is_compressed_file_ext(cur_file):
             cur_file = os.path.join(leaks_dir, cur_file)
             patoolib.extract_archive(cur_file, verbosity=0, outdir=leaks_dir, interactive=False)
             if os.path.exists(cur_file):
                 os.unlink(cur_file)
             # TODO Keep trace of original compressed name ?
+        if if_binary_move(os.path.join(leaks_dir, cur_file), leak_destination_path):
+            print("Binary found and has been moved")
     # Move directories in Unprocessed Folder
     # Only keep flatten uncompressed files
     # TODO manage structured uncompressed files
