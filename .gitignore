@@ -1,9 +1,21 @@
+# Editors
 /.idea/
-/test/
+/.vscode/**/*
+
+# Python virtual environnment
+/env/
 /venv/
+
+# Python temporary files
+*.pyc
+
+# Tests
+/test/
+
+# Feeder configurations
 /Leaks_Folder/
 /Unprocessed_Leaks/
 /current_leak.txt
 /leak_list.csv
+custom-config.yaml
 /Unprocessed_files/
-/env/

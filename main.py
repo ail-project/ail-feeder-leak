@@ -35,6 +35,9 @@ threading.stack_size(2 ** 27)  # new thread will get stack of such size
 # Feeder configuration dict
 CONFIG = None
 
+current_leak_filename = "current_leak.txt"
+manifest_filename = "fs_manifest.csv"
+leak_list_filename = "leak_list.csv"
 
 def ail_publish(apikey, manifest_file, file_name, data=None):
     """
@@ -51,7 +54,7 @@ def ail_publish(apikey, manifest_file, file_name, data=None):
             if data.get("status") == "success":
                 print(file_name + ": Successfully Pushed to Ail")
                 file_by_number = re.findall(r"[-+]?\d*\.\d+|\d+", file_name.split('_')[1])
-                file_to_del = file_name.split('_')[0] + "_" + str(int(file_by_number[0]) - 1) + ".txt"
+                file_to_del = file_name.split('_')[0] + "_" + str(int(file_by_number[0]) - 1)
                 filepath = os.path.join(os.path.dirname(os.path.realpath(manifest_file)), file_to_del)
                 if os.path.exists(filepath):
                     os.unlink(os.path.join(os.path.dirname(os.path.realpath(manifest_file)), file_to_del))
@@ -124,7 +127,7 @@ def split(leak_name, chunk_size):
     will split the leak into chunks of files based on the config file
     """
     dir_path = os.path.dirname(os.path.realpath(leak_name))
-    manifest_file = os.path.join(dir_path, "fs_manifest.csv")
+    manifest_file = os.path.join(dir_path, manifest_filename)
     if os.path.exists(manifest_file):
         print("Resuming from the last task")
         file_worker(leak_name, dir_path)
@@ -159,7 +162,7 @@ def file_worker(leak_name, dir_path):
     :param dir_path: where to process the files
     """
     print("Starting to process splits")
-    manifest_file = os.path.join(dir_path, "fs_manifest.csv")
+    manifest_file = os.path.join(dir_path, manifest_filename)
     if not os.path.isdir(dir_path):
         print("Input directory is not a valid directory")
 
@@ -207,7 +210,7 @@ def update_leak_list():
 
     if not os.listdir(cur_dir):
         cur_dir = os.path.dirname(os.path.realpath(__file__))
-        manifest_file = os.path.join(cur_dir, CONFIG.out_folder, "fs_manifest.csv")
+        manifest_file = os.path.join(cur_dir, CONFIG.out_folder, manifest_filename)
         if os.path.exists(manifest_file):
             df = pd.read_csv(manifest_file)
             if df.empty:
@@ -219,7 +222,7 @@ def update_leak_list():
     print(f"list_of_files: {list_of_files}")
 
     df = pd.DataFrame(list_of_files, columns=["Leaks"])
-    df.to_csv('leak_list.csv', index=False)
+    df.to_csv(leak_list_filename, index=False)
     return True
 
 
@@ -241,13 +244,13 @@ def move_new_leak():
 
     if update_leak_list():
         cur_dir = os.path.dirname(os.path.realpath(__file__))
-        leak_list = os.path.join(cur_dir, 'leak_list.csv')
+        leak_list = os.path.join(cur_dir, leak_list_filename)
         file_name = ((pd.read_csv(leak_list).values[0]).tolist())[0]
         leak_source_path = os.path.join(cur_dir, CONFIG.leaks_folder, file_name)
         leak_destination_path = os.path.join(cur_dir, CONFIG.out_folder)
         if os.path.exists(leak_source_path):
             new_location = shutil.move(leak_source_path, leak_destination_path)
-            with open("current_leak.txt", "w") as file:
+            with open(current_leak_filename, "w") as file:
                 file.write(new_location)
                 file.close()
             result = True
@@ -263,7 +266,7 @@ def run():
     unprocessed_leaks = CONFIG.out_folder
     unprocessed_folder = CONFIG.unprocessed_folder
     cur_dir = os.path.dirname(os.path.realpath(__file__))
-    manifest_file = os.path.join(cur_dir, unprocessed_leaks, "fs_manifest.csv")
+    manifest_file = os.path.join(cur_dir, unprocessed_leaks, manifest_filename)
     chunk_size = CONFIG.chunks
     if not os.path.isdir(leaks_folder):
         os.makedirs(leaks_folder)
@@ -275,10 +278,10 @@ def run():
         os.makedirs(unprocessed_folder)
 
     if update_leak_list():
-        if not os.path.exists(os.path.join(cur_dir, "current_leak.txt")):
+        if not os.path.exists(os.path.join(cur_dir, current_leak_filename)):
             print("Starting a new process")
             move_new_leak()
-            leak_name = open("current_leak.txt", "r+").read()
+            leak_name = open(current_leak_filename, "r+").read()
             split(leak_name, chunk_size)
         else:
             if os.path.exists(manifest_file):
@@ -289,16 +292,16 @@ def run():
                     run()
                 else:
                     print("Processing from the last task")
-                    leak_name = open("current_leak.txt", "r+").read()
+                    leak_name = open(current_leak_filename, "r+").read()
                     split(leak_name, chunk_size)
             else:
                 if move_new_leak():
                     print("Processing new task")
-                    leak_name = open("current_leak.txt", "r+").read()
+                    leak_name = open(current_leak_filename, "r+").read()
                     split(leak_name, chunk_size)
                 else:
-                    if os.path.exists(os.path.join(cur_dir, "current_leak.txt")):
-                        os.remove(os.path.join(cur_dir, "current_leak.txt"))
+                    if os.path.exists(os.path.join(cur_dir, current_leak_filename)):
+                        os.remove(os.path.join(cur_dir, current_leak_filename))
                     if os.path.exists(os.path.join(cur_dir, "leak_list.txt")):
                         os.remove(os.path.join(cur_dir, "leak_list.txt"))
                     print("No more leaks to process")
