@@ -18,7 +18,7 @@ def if_binary_move(file_full_path,leak_destination_path):
         print(f"Moving {file_full_path} to unprocessed files")
         if os.path.exists(file_full_path):
             shutil.move(file_full_path, leak_destination_path)
-        result = True
+    result = True
     return result
 
 
