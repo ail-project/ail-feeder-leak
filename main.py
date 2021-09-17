@@ -54,7 +54,7 @@ def ail_publish(apikey, manifest_file, file_name, data=None):
             if data.get("status") == "success":
                 print(file_name + ": Successfully Pushed to Ail")
                 file_by_number = re.findall(r"[-+]?\d*\.\d+|\d+", file_name.split('_')[1])
-                file_to_del = file_name.split('_')[0] + "_" + str(int(file_by_number[0]) - 1) + ".txt"
+                file_to_del = file_name.split('_')[0] + "_" + str(int(file_by_number[0]) - 1)
                 filepath = os.path.join(os.path.dirname(os.path.realpath(manifest_file)), file_to_del)
                 if os.path.exists(filepath):
                     os.unlink(os.path.join(os.path.dirname(os.path.realpath(manifest_file)), file_to_del))
