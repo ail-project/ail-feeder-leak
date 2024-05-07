@@ -58,6 +58,7 @@ def get_list_of_files(leaks_dir, unprocessed_dir):
             patoolib.extract_archive(cur_file, verbosity=0, outdir=leaks_dir, interactive=False)
             if os.path.exists(cur_file):
                 os.unlink(cur_file)
+            continue
             # TODO Keep trace of original compressed name ?
         if if_binary_move(os.path.join(leaks_dir, cur_file), leak_destination_path):
             print("Binary found and has been moved")
